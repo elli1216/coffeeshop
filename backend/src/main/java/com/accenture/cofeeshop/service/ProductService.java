@@ -1,6 +1,5 @@
 package com.accenture.cofeeshop.service;
 
-import com.accenture.cofeeshop.dto.*;
 import com.accenture.cofeeshop.dto.product.ProductRequest;
 import com.accenture.cofeeshop.dto.product.ProductResponse;
 import com.accenture.cofeeshop.exception.ResourceNotFoundException;

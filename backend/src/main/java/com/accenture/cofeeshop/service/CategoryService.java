@@ -1,6 +1,5 @@
 package com.accenture.cofeeshop.service;
 
-import com.accenture.cofeeshop.dto.*;
 import com.accenture.cofeeshop.dto.category.CategoryRequest;
 import com.accenture.cofeeshop.dto.category.CategoryResponse;
 import com.accenture.cofeeshop.exception.*;

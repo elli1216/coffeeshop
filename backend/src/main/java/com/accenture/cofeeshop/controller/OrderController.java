@@ -1,6 +1,5 @@
 package com.accenture.cofeeshop.controller;
 
-import com.accenture.cofeeshop.dto.*;
 import com.accenture.cofeeshop.dto.order.OrderRequest;
 import com.accenture.cofeeshop.dto.order.OrderResponse;
 import com.accenture.cofeeshop.dto.order.StatusUpdateRequest;
