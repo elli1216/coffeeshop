@@ -6,7 +6,6 @@ import tools.jackson.databind.introspect.AnnotatedMember;
 
 @SpringBootApplication
 public class CofeeshopApplication {
-
 	public static void main(String[] args) {
 		SpringApplication.run(CofeeshopApplication.class, args);
 	}
