@@ -47,7 +47,9 @@ pipeline {
             steps {
                 dir('frontend') {
                     sh 'npm ci'
-                    sh 'npm run build'
+		    retry (3) {
+			sh 'npm run build'
+		    }
                 }
             }
         }
@@ -94,4 +96,10 @@ pipeline {
             }
         }
     }
+}
+
+environment {
+	SPRING_DATASOURCE_URL = 'jdbc:mysql://db:3306/coffeeshop'
+	VITE_API_URL = 'http://localhost:8081/api'
+	NODE_OPTIONS = '--dns-result-order=ipv4first'
 }
