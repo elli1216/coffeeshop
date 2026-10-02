@@ -86,12 +86,12 @@ pipeline {
                 sh '''
                     for i in $(seq 1 30); do
                     if curl -fs http://coffeeshop-backend:8081/actuator/health | grep -q UP; then
-                    echo "Backend is UP"; break
+                    echo "Backend is UP, access http://localhost:8081/actuator/health"; break
                     fi
                     echo "Waiting for backend... ($i)"; sleep 5
                     done
                     curl -fs http://coffeeshop-backend:8081/actuator/health | grep -q UP
-                    curl -fs http://coffeeshop-frontend:80 > /dev/null && echo "Frontend is UP"
+                    curl -fs http://coffeeshop-frontend:80 > /dev/null && echo "Frontend is UP, access http://localhost:8083"
                 '''
             }
         }
