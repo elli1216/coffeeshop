@@ -7,7 +7,7 @@ pipeline {
     }
 
     environment {
-        SPRING_DATASOURCE_URL = 'jdbc:mysql://db:3307/coffeeshop'
+        SPRING_DATASOURCE_URL = 'jdbc:mysql://db:3306/coffeeshop'
     }
 
     stages {
