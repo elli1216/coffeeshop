@@ -1,0 +1,27 @@
+services:
+  backend:
+    build: ../backend
+    container_name: coffeeshop-backend
+    restart: unless-stopped
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/coffeeshop
+    ports:
+      - "8081:8081"
+    networks:
+      - shared
+
+  frontend:
+    build: ../frontend
+    container_name: coffeeshop-frontend
+    restart: unless-stopped
+    ports:
+      - "8083:80"
+    depends_on:
+      - backend
+    networks:
+      - shared
+
+networks:
+  shared:
+    external: true
+    name: gitea-docker_gitea

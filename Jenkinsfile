@@ -72,5 +72,26 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy') {
+            steps {
+                sh 'docker compose -p coffeeshop-app -f deploy/docker-compose.app.yml up -d --build'
+            }
+        }
+
+        stage('Smoke Test') {
+            steps {
+                sh '''
+                    for i in $(seq 1 30); do
+                    if curl -fs http://coffeeshop-backend:8081/actuator/health | grep -q UP; then
+                    echo "Backend is UP"; break
+                    fi
+                    echo "Waiting for backend... ($i)"; sleep 5
+                    done
+                    curl -fs http://coffeeshop-backend:8081/actuator/health | grep -q UP
+                    curl -fs http://coffeeshop-frontend:80 > /dev/null && echo "Frontend is UP"
+                '''
+            }
+        }
     }
 }
