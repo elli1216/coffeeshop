@@ -2,7 +2,7 @@
 
 REST API for categories, products, and orders. Built with **Spring Boot 4**, **Java 21**, **Spring Data JPA**, and **MySQL 8**.
 
-Base package: `com.accenture.cofeeshop`
+Base package: `com.local.cofeeshop`
 
 ---
 
@@ -42,7 +42,7 @@ MySQL (coffeeshop database)
 ```
 
 ```text
-src/main/java/com/accenture/cofeeshop/
+src/main/java/com/local/cofeeshop/
 ├── config/       WebConfig (CORS)
 ├── controller/   CategoryController, ProductController, OrderController
 ├── dto/          category/, product/, order/ request & response records
