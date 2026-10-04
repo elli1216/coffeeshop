@@ -1,4 +1,4 @@
-# ☕ Coffeeshop — Full-Stack App with CI/CD
+# ☕ Full-Stack App with CI/CD
 
 A coffeeshop ordering system with a **Spring Boot** REST API, a **React + TypeScript** frontend, and a fully containerized **CI/CD pipeline** (Gitea → Jenkins → SonarQube → Docker deploy).
 
@@ -11,33 +11,8 @@ A coffeeshop ordering system with a **Spring Boot** REST API, a **React + TypeSc
 
 ## 1. Architecture
 
-```text
- Developer (IntelliJ / VS Code)
-        │ git push
-        ▼
- ┌──────────────┐  webhook   ┌──────────────────────────────────────────────┐
- │    Gitea     │──────────► │                  Jenkins                     │
- │  (Git server)│ ◄───────── │  checkout → build/test → Sonar → Quality Gate│
- └──────────────┘   clone    │  → deploy (docker compose) → smoke test      │
-                             └───────┬───────────────────────┬──────────────┘
-                                     │ analysis              │ docker.sock
-                                     ▼                       ▼
-                             ┌──────────────┐     ┌────────────────────────┐
-                             │  SonarQube   │     │ coffeeshop-frontend    │
-                             │ (code quality)│    │ (nginx, React build)   │
-                             └──────────────┘     │          │ /api        │
-                                                  │          ▼             │
-                                                  │ coffeeshop-backend     │
-                                                  │ (Spring Boot)          │
-                                                  └──────────┬─────────────┘
-                                                             ▼
-                                                  ┌────────────────────────┐
-                                                  │   MySQL (db)           │
-                                                  │ databases: gitea,      │
-                                                  │            coffeeshop  │
-                                                  └────────────────────────┘
-```
-
+<img width="900" height="600" alt="architecture" src="https://github.com/user-attachments/assets/6daa6867-d3c0-41a6-b0d0-c7e2ee703b9a" />
+                                  
 All containers share one Docker network (`gitea-docker_gitea`), so they reach each other **by name**.
 
 ---
