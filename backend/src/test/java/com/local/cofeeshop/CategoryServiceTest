@@ -1,0 +1,68 @@
+package com.local.cofeeshop.service;
+
+import com.local.cofeeshop.dto.category.CategoryRequest;
+import com.local.cofeeshop.dto.category.CategoryResponse;
+import com.local.cofeeshop.exception.BusinessException;
+import com.local.cofeeshop.exception.ResourceNotFoundException;
+import com.local.cofeeshop.models.Category;
+import com.local.cofeeshop.repository.CategoryRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class CategoryServiceTest {
+
+    @Mock
+    private CategoryRepository categoryRepository;
+
+    @InjectMocks
+    private CategoryService categoryService;
+
+    @Test
+    void create_savesCategory_whenNameIsUnique() {
+        when(categoryRepository.existsByNameIgnoreCase("Coffee")).thenReturn(false);
+        when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> {
+            Category c = inv.getArgument(0);
+            c.setId(1L);
+            return c;
+        });
+
+        CategoryRequest request = new CategoryRequest("Coffee", "Espresso with milk");
+        CategoryResponse result = categoryService.create(request);
+
+        assertThat(result.id()).isEqualTo(1L);
+        assertThat(result.name()).isEqualTo("Coffee");
+        verify(categoryRepository).save(any(Category.class));
+    }
+
+    @Test
+    void create_throws_whenNameAlreadyExists() {
+        when(categoryRepository.existsByNameIgnoreCase("Coffee")).thenReturn(true);
+
+        CategoryRequest request = new CategoryRequest("Coffee", null);
+
+        assertThatThrownBy(() -> categoryService.create(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("already exists");
+
+        verify(categoryRepository, never()).save(any());
+    }
+
+    @Test
+    void findById_throws_whenNotFound() {
+        when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.findById(99L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("99");
+    }
+}
