@@ -1,0 +1,121 @@
+package com.local.cofeeshop.service;
+
+import com.local.cofeeshop.dto.order.OrderItemRequest;
+import com.local.cofeeshop.dto.order.OrderRequest;
+import com.local.cofeeshop.dto.order.OrderResponse;
+import com.local.cofeeshop.exception.BusinessException;
+import com.local.cofeeshop.exception.ResourceNotFoundException;
+import com.local.cofeeshop.models.*;
+import com.local.cofeeshop.repository.CustomerOrderRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class OrderServiceTest {
+
+    @Mock private CustomerOrderRepository orderRepository;
+    @Mock private ProductService productService;
+
+    @InjectMocks
+    private OrderService orderService;
+
+    private Product product(long id, String name, String price, boolean available) {
+        Product p = new Product();
+        p.setId(id);
+        p.setName(name);
+        p.setPrice(new BigDecimal(price));
+        p.setAvailable(available);
+        return p;
+    }
+
+    private CustomerOrder orderWithStatus(OrderStatus status) {
+        CustomerOrder o = new CustomerOrder();
+        o.setId(1L);
+        o.setCustomerName("Darl");
+        o.setStatus(status);
+        return o;
+    }
+
+    @Test
+    void create_calculatesTotalOnServer_andLocksUnitPrice() {
+        when(productService.getProduct(1L)).thenReturn(product(1, "Latte", "150.00", true));
+        when(productService.getProduct(2L)).thenReturn(product(2, "Croissant", "95.50", true));
+        when(orderRepository.save(any(CustomerOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderRequest request = new OrderRequest("Darl", List.of(
+                new OrderItemRequest(1L, 2),     // 2 × 150.00 = 300.00
+                new OrderItemRequest(2L, 1)));   // 1 ×  95.50 =  95.50
+
+        OrderResponse result = orderService.create(request);
+
+        assertThat(result.totalAmount()).isEqualByComparingTo("395.50");
+        assertThat(result.status()).isEqualTo(OrderStatus.PENDING);
+        assertThat(result.items()).hasSize(2);
+        assertThat(result.items().get(0).unitPrice()).isEqualByComparingTo("150.00");
+        assertThat(result.items().get(0).subtotal()).isEqualByComparingTo("300.00");
+    }
+
+    @Test
+    void create_throws_whenProductIsUnavailable() {
+        when(productService.getProduct(1L)).thenReturn(product(1, "Americano", "120.00", false));
+
+        OrderRequest request = new OrderRequest("Darl", List.of(new OrderItemRequest(1L, 1)));
+
+        assertThatThrownBy(() -> orderService.create(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("not available");
+
+        verify(orderRepository, never()).save(any());
+    }
+
+    @ParameterizedTest(name = "{0} -> {1} is allowed")
+    @CsvSource({
+            "PENDING, PREPARING",
+            "PENDING, CANCELLED",
+            "PREPARING, COMPLETED",
+            "PREPARING, CANCELLED"
+    })
+    void updateStatus_allowsValidTransitions(OrderStatus from, OrderStatus to) {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(orderWithStatus(from)));
+
+        OrderResponse result = orderService.updateStatus(1L, to);
+
+        assertThat(result.status()).isEqualTo(to);
+    }
+
+    @ParameterizedTest(name = "{0} -> {1} is rejected")
+    @CsvSource({
+            "PENDING, COMPLETED",
+            "PREPARING, PENDING",
+            "COMPLETED, CANCELLED",
+            "CANCELLED, PENDING"
+    })
+    void updateStatus_rejectsInvalidTransitions(OrderStatus from, OrderStatus to) {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(orderWithStatus(from)));
+
+        assertThatThrownBy(() -> orderService.updateStatus(1L, to))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Cannot change order status");
+    }
+
+    @Test
+    void findById_throws_whenNotFound() {
+        when(orderRepository.findById(42L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> orderService.findById(42L))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+}
