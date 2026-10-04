@@ -1,0 +1,142 @@
+package com.local.cofeeshop.controller;
+
+import com.local.cofeeshop.exception.BusinessException;
+import com.local.cofeeshop.exception.ResourceNotFoundException;
+import com.local.cofeeshop.models.OrderStatus;
+import com.local.cofeeshop.service.OrderService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import com.local.cofeeshop.dto.order.OrderItemResponse;
+import com.local.cofeeshop.dto.order.OrderRequest;
+import com.local.cofeeshop.dto.order.OrderResponse;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@WebMvcTest(OrderController.class)
+class OrderControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private OrderService orderService;
+
+    @Test
+    void createOrder_returns201_withLocationHeader() throws Exception {
+        OrderItemResponse item = new OrderItemResponse(
+                1L,
+                "Latte",
+                2,
+                new BigDecimal("150.00"),
+                new BigDecimal("300.00")
+        );
+
+        OrderResponse createdOrder = new OrderResponse(
+                1L,
+                "Darl",
+                OrderStatus.PENDING,
+                new BigDecimal("300.00"),
+                LocalDateTime.now(),
+                List.of(item)
+        );
+
+        when(orderService.create(any(OrderRequest.class)))
+                .thenReturn(createdOrder);
+
+        mockMvc.perform(post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "customerName": "Darl",
+                              "items": [
+                                {
+                                  "productId": 1,
+                                  "quantity": 2
+                                }
+                              ]
+                            }
+                            """))
+                .andExpect(status().isCreated())
+                .andExpect(header().string(
+                        "Location",
+                        "/api/orders/1"
+                ))
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.customerName").value("Darl"))
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.totalAmount").value(300.0))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].productId").value(1))
+                .andExpect(jsonPath("$.items[0].productName").value("Latte"))
+                .andExpect(jsonPath("$.items[0].quantity").value(2))
+                .andExpect(jsonPath("$.items[0].unitPrice").value(150.0))
+                .andExpect(jsonPath("$.items[0].subtotal").value(300.0));
+
+        verify(orderService).create(any(OrderRequest.class));
+    }
+
+    @Test
+    void createOrder_returns400_whenItemsAreEmpty() throws Exception {
+        mockMvc.perform(post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "customerName": "Darl", "items": [] }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Validation failed"));
+
+        verify(orderService, never()).create(any());
+    }
+
+    @Test
+    void getOrder_returns404_whenNotFound() throws Exception {
+        when(orderService.findById(99L)).thenThrow(new ResourceNotFoundException("Order not found: 99"));
+
+        mockMvc.perform(get("/api/orders/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Order not found: 99"));
+    }
+
+    @Test
+    void updateStatus_returns400_onInvalidTransition() throws Exception {
+        when(orderService.updateStatus(1L, OrderStatus.PENDING))
+                .thenThrow(new BusinessException("Cannot change order status from COMPLETED to PENDING"));
+
+        mockMvc.perform(patch("/api/orders/1/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "status": "PENDING" }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateStatus_returns400_onUnknownEnumValue() throws Exception {
+        mockMvc.perform(patch("/api/orders/1/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "status": "DONE" }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getOrder_returns400_whenIdIsNotANumber() throws Exception {
+        mockMvc.perform(get("/api/orders/abc"))
+                .andExpect(status().isBadRequest());
+    }
+}
